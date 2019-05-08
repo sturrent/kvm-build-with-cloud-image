@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Script to setup and boot cloud image VM
+# Script to setup and boot cloud image VMs in kvm
 
 
 ## Verifications before the run
