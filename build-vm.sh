@@ -33,9 +33,10 @@ SSH_KEY=$(cat /home/sturrent/.ssh/id_rsa.pub)
 
 # Location of cloud image
 CENTOS_IMAGE=$DIR/CentOS-7-x86_64-GenericCloud.qcow2
+UBUNTU_IMAGE=$DIR/bionic-server-cloudimg-amd64.img
 
-IMAGE=$CENTOS_IMAGE
-#IMAGE=$UBUNTU_IMAGE
+#IMAGE=$CENTOS_IMAGE
+IMAGE=$UBUNTU_IMAGE
 
 # Amount of RAM in MB
 MEM=2048
@@ -129,12 +130,12 @@ chpasswd:
   expire: False
 
 # Intall some extra packages
-packages:
-  - epel-release
-  - telnet
-  - nmap
-  - bind-utils
-  - bash-completion
+# packages:
+#   - epel-release
+#   - telnet
+#   - nmap
+#   - bind-utils
+#   - bash-completion
 
 # Upgrade system
 #package_upgrade: true
