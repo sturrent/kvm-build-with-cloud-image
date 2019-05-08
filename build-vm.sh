@@ -119,14 +119,16 @@ fqdn: $VM_NAME.example.com
 # Set root pass
 users:
   - name: root
-  - name: cloud_user
+  - name: $USER_IMG
     sudo: ALL=(ALL) NOPASSWD:ALL
     lock_passwd: true
+    shell: /bin/bash
     ssh-authorized-keys:
       - $SSH_KEY
 chpasswd:
   list: |
-    root:cloud_user
+    root:${USER_IMG}
+    $USER_IMG:t3mp0r4l
   expire: False
 
 # Intall some extra packages
