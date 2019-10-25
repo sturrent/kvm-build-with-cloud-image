@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Script to setup and boot cloud image VMs in kvm
-# v.0.7.12
+# v.0.7.15
 
 ## Usage
 #"-h|--help" help info
@@ -10,6 +10,7 @@
 #"-m|--memory" memory in MB
 #"-s|--sshkey" path to public ssh key
 #"-i|--image" path to cloud image to use (ubuntu or centos)
+#"-d|--delete" delete VM
 
 # Directory of the script
 SCRIPT_PATH="$( cd "$(dirname "$0")" ; pwd -P )"
@@ -21,10 +22,11 @@ mkdir -p $DIR
 
 # Location of cloud image
 CENTOS_IMAGE=$DIR/CentOS-7-x86_64-GenericCloud.qcow2
-UBUNTU_IMAGE=$DIR/bionic-server-cloudimg-amd64.img
+#UBUNTU_IMAGE=$DIR/bionic-server-cloudimg-amd64.img
+UBUNTU_IMAGE=$DIR/xenial-server-cloudimg-amd64-disk1.img
 
 # read the options
-TEMP=`getopt -o n:c:m:s:i:h --long name:,cores:,memory:,sshkey:,image:,help -n 'build-vm.sh' -- "$@"`
+TEMP=$(getopt -o n:c:m:s:i:dh --long name:,cores:,memory:,sshkey:,image:,delete,help -n 'build-vm.sh' -- "$@")
 eval set -- "$TEMP"
 
 # set an initial value for the flags
@@ -34,6 +36,7 @@ CORES="1"
 MEMORY="512"
 SSH_KEY_FILE=/root/.ssh/id_rsa.pub
 IMAGE="$UBUNTU_IMAGE"
+DELETE="0"
 
 while true ;
 do
@@ -59,6 +62,7 @@ do
             "") shift 2;;
             *) IMAGE="$2"; shift 2;;
             esac;;
+        -d|--delete) DELETE=1; shift;;
         --) shift ; break ;;
         *) echo -e "Error: invalid argument\n" ; exit 3 ;;
     esac
@@ -67,13 +71,14 @@ done
 #if -h | --help option is selected show usage
 if [ $HELP -eq 1 ]
 then
-	echo -e "build-vm.sh, usage: $SCRIPT_PATH/$SCRIPT_NAME -n|--name <VM_NAME> [-c|--cores <CORES_#>] [-m|--memory <MEMORY_IN_MB>] [-s|--sshkey <PUBLIC_SSH_KEY_FILE>] [-i|--image <IMAGE_FILE>]\n"
+	echo -e "build-vm.sh, usage: bash $SCRIPT_NAME -n|--name <VM_NAME> [-c|--cores <CORES_#>] [-m|--memory <MEMORY_IN_MB>] [-s|--sshkey <PUBLIC_SSH_KEY_FILE>] [-i|--image <IMAGE_FILE>] [-d|--delete]\n"
 	echo -e '\n"-h|--help" help info
 "-n|--name" vm name
 "-c|--cores" number of cores
 "-m|--memory" memory in MB
 "-s|--sshkey" path to public ssh key
-"-i|--image" path to cloud image to use (ubuntu or centos)\n'
+"-i|--image" path to cloud image to use (ubuntu or centos)
+"-d|--delete" delete VM\n'
 	exit 0
 fi
 
@@ -87,8 +92,25 @@ fi
 # Validate VM_NAME was provided
 if [ -z $VM_NAME ]; then
 	echo -e "Error: VM name must be provided. \n"
-	echo -e "build-vm.sh, usage: $SCRIPTPATH/$SCRIPT_NAME -n|--name <VM_NAME> [-c|--cores <CORES_#>] [-m|--memory <MEMORY_IN_MB>] [-s|--sshkey <PUBLIC_SSH_KEY_FILE>] [-i|--image <IMAGE_FILE>]\n"
+	echo -e "build-vm.sh, usage: bash $SCRIPT_NAME -n|--name <VM_NAME> [-c|--cores <CORES_#>] [-m|--memory <MEMORY_IN_MB>] [-s|--sshkey <PUBLIC_SSH_KEY_FILE>] [-i|--image <IMAGE_FILE>] [-d|--delete]\n"
 	exit 4
+fi
+
+# Validate VM deletion
+if [ $DELETE -eq 1 ]
+then
+  ls -ld $DIR/$VM_NAME > /dev/null 2>&1
+  VM_STATUS=$?
+  if [ $VM_STATUS -ne '0' ]; then
+	  echo -e "Error: $VM_NAME VM not found. \n"
+	  exit 5
+  else
+    virsh destroy $VM_NAME
+    virsh undefine $VM_NAME
+    rm -rf $DIR/$VM_NAME > /dev/null 2>&1
+    echo -e "$VM_NAME has been deleted \n"
+    exit 0
+  fi
 fi
 
 # Validate ssh public key
@@ -96,17 +118,17 @@ ssh-keygen -l -f "$SSH_KEY_FILE" > /dev/null 2>&1
 KEY_STATUS=$?
 if [ $KEY_STATUS -ne '0' ]; then
 	echo -e "Error: $SSH_KEY_FILE is not a public key file. \n"
-	echo -e "build-vm.sh, usage: $SCRIPTPATH/$SCRIPT_NAME -n|--name <VM_NAME> [-c|--cores <CORES_#>] [-m|--memory <MEMORY_IN_MB>] [-s|--sshkey <PUBLIC_SSH_KEY_FILE>] [-i|--image <IMAGE_FILE>]\n"
-	exit 5
+	echo -e "build-vm.sh, usage: bash $SCRIPT_NAME -n|--name <VM_NAME> [-c|--cores <CORES_#>] [-m|--memory <MEMORY_IN_MB>] [-s|--sshkey <PUBLIC_SSH_KEY_FILE>] [-i|--image <IMAGE_FILE>] [-d|--delete]\n"
+	exit 6
 fi
 
-# Validate ssh public key
+# Validate image file
 qemu-img check "$IMAGE" > /dev/null 2>&1 
 IMAGE_STATUS=$?
 if [ $IMAGE_STATUS -ne '0' ]; then
 	echo -e "Error: $IMAGE is not a valid qcow2 file. \n"
-	echo -e "build-vm.sh, usage: $SCRIPTPATH/$SCRIPT_NAME -n|--name <VM_NAME> [-c|--cores <CORES_#>] [-m|--memory <MEMORY_IN_MB>] [-s|--sshkey <PUBLIC_SSH_KEY_FILE>] [-i|--image <IMAGE_FILE>]\n"
-	exit 5
+	echo -e "build-vm.sh, usage: bash $SCRIPT_NAME -n|--name <VM_NAME> [-c|--cores <CORES_#>] [-m|--memory <MEMORY_IN_MB>] [-s|--sshkey <PUBLIC_SSH_KEY_FILE>] [-i|--image <IMAGE_FILE>] [-d|--delete]\n"
+	exit 7
 fi
 
 ## Variables
@@ -219,7 +241,7 @@ _EOF_
     echo "$(date -R) Generating ISO for cloud-init..."
     genisoimage -output $CI_ISO -volid cidata -joliet -r $USER_DATA $META_DATA &>> $VM_NAME.log
 
-    echo "$(date -R) Installing the domain and adjusting the configuration..."
+    echo -e "$(date -R) Installing the domain and adjusting the configuration...\n"
     echo "[INFO] Installing with the following parameters:"
     echo "VM name=$VM_NAME ram=$MEMORY vcpus=$CORES bridge=$BRIDGE"
 
@@ -241,7 +263,7 @@ _EOF_
     done
 
     # Eject cdrom
-    echo "$(date -R) Cleaning up cloud-init..."
+    echo -e "\n$(date -R) Cleaning up cloud-init..."
     virsh change-media $VM_NAME hda --eject --config >> $VM_NAME.log
 
     # Remove the unnecessary cloud init files
