@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Script to setup and boot cloud image VMs in kvm
-# v.0.7.15
+# v.0.7.17
 
 ## Usage
 #"-h|--help" help info
@@ -72,7 +72,7 @@ done
 if [ $HELP -eq 1 ]
 then
 	echo -e "build-vm.sh, usage: bash $SCRIPT_NAME -n|--name <VM_NAME> [-c|--cores <CORES_#>] [-m|--memory <MEMORY_IN_MB>] [-s|--sshkey <PUBLIC_SSH_KEY_FILE>] [-i|--image <IMAGE_FILE>] [-d|--delete]\n"
-	echo -e '\n"-h|--help" help info
+	echo -e '"-h|--help" help info
 "-n|--name" vm name
 "-c|--cores" number of cores
 "-m|--memory" memory in MB
@@ -108,6 +108,7 @@ then
     virsh destroy $VM_NAME
     virsh undefine $VM_NAME
     rm -rf $DIR/$VM_NAME > /dev/null 2>&1
+    sed -i "/ ${VM_NAME}$/d" /etc/hosts > /dev/null 2>&1
     echo -e "$VM_NAME has been deleted \n"
     exit 0
   fi
@@ -269,8 +270,12 @@ _EOF_
     # Remove the unnecessary cloud init files
     rm $USER_DATA $CI_ISO
 
+    # Update /etc/hosts
+    sed -i "/ ${VM_NAME}$/d" /etc/hosts > /dev/null 2>&1
+    echo "$IP ${VM_NAME}.example.com $VM_NAME" >> /etc/hosts
+
     echo -e "$(date -R) DONE.\n"
-    echo -e "SSH to $VM_NAME using ' ssh $USER_IMG@$IP ' with the corresponding private key for $SSH_KEY_FILE\n"
+    echo -e "SSH to $VM_NAME using ' ssh ${USER_IMG}@${VM_NAME} ' with the corresponding private key for $SSH_KEY_FILE\n"
 
 popd > /dev/null
 
