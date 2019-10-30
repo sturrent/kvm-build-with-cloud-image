@@ -8,9 +8,8 @@ sudo apt update; sudo apt install qemu qemu-kvm libvirt-bin  bridge-utils  virt-
 
 Usage:
 ```
-# bash build-vms.sh -h
-build-vm.sh, usage: /virt/build-vms.sh -n|--name <VM_NAME> [-c|--cores <CORES_#>] [-m|--memory <MEMORY_IN_MB>] [-s|--sshkey <PUBLIC_SSH_KEY_FILE>] [-i|--image <IMAGE_FILE>]
-
+sudo bash build-vms.sh -h
+build-vm.sh, usage: bash build-vms.sh -n|--name <VM_NAME> [-c|--cores <CORES_#>] [-m|--memory <MEMORY_IN_MB>] [-s|--sshkey <PUBLIC_SSH_KEY_FILE>] [-i|--image <IMAGE_FILE>] [-d|--delete]
 
 "-h|--help" help info
 "-n|--name" vm name
@@ -18,5 +17,6 @@ build-vm.sh, usage: /virt/build-vms.sh -n|--name <VM_NAME> [-c|--cores <CORES_#>
 "-m|--memory" memory in MB
 "-s|--sshkey" path to public ssh key
 "-i|--image" path to cloud image to use (ubuntu or centos)
+"-d|--delete" delete VM
 
 ```
