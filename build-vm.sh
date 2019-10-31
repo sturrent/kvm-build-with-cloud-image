@@ -162,12 +162,14 @@ if [ "$?" -eq 0 ]; then
 fi
 
 # User of cloud image
-if [ $IMAGE == $CENTOS_IMAGE ]; then
+if [ $IMAGE = $CENTOS_IMAGE ]; then
   USER_IMG=centos;
   RM_CLOUDINIT=$(echo "yum, -y, remove, cloud-init")
 elif [ $IMAGE == $UBUNTU_IMAGE ]; then
   USER_IMG=ubuntu;
   RM_CLOUDINIT=$(echo "apt-get, remove, cloud-init, -y")
+else
+  USER_IMG=cloud-user;
 fi
 
 # Start clean
