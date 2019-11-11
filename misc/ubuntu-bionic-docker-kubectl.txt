@@ -1,0 +1,26 @@
+{
+# Install dependencies
+sudo apt update
+sudo apt install apt-transport-https ca-certificates curl gnupg-agent software-properties-common -y
+
+# Get the Docker gpg key:
+curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo apt-key add -
+
+# Add the Docker repository:
+sudo add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu \
+$(lsb_release -cs) \
+stable"
+
+# Get the Kubernetes gpg key:
+curl -s https://packages.cloud.google.com/apt/doc/apt-key.gpg | sudo apt-key add -
+
+# Add the Kubernetes repository:
+echo "deb https://apt.kubernetes.io/ kubernetes-xenial main" | sudo tee /etc/apt/sources.list.d/kubernetes.list
+
+# Update and install packages:
+sudo apt update
+sudo apt install docker-ce=5:18.09.9~3-0~ubuntu-bionic docker-ce-cli=5:18.09.9~3-0~ubuntu-bionic containerd.io kubectl=1.15.5-00 -y
+
+# Hold them at the current version:
+sudo apt-mark hold docker-ce kubectl docker-ce-cli
+}

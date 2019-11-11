@@ -1,0 +1,22 @@
+{
+# Get the Docker gpg key:
+curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo apt-key add -
+
+# Add the Docker repository:
+sudo add-apt-repository    "deb [arch=amd64] https://download.docker.com/linux/ubuntu   $(lsb_release -cs) stable"
+
+# Get the Kubernetes gpg key:
+curl -s https://packages.cloud.google.com/apt/doc/apt-key.gpg | sudo apt-key add -
+
+# Add the Kubernetes repository:
+echo "deb https://apt.kubernetes.io/ kubernetes-xenial main" | sudo tee /etc/apt/sources.list.d/kubernetes.list
+
+# Update your packages:
+sudo apt update
+
+# Install Docker, kubelet, kubeadm, and kubectl:
+sudo apt install -y docker-ce=5:18.09.9~3-0~ubuntu-xenial kubeadm=1.15.5-00 kubelet=1.15.5-00
+
+# Hold them at the current version:
+sudo apt-mark hold docker-ce kubelet kubeadm kubectl
+}
