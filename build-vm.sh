@@ -249,7 +249,7 @@ _EOF_
 
     echo -e "$(date -R) Installing the domain and adjusting the configuration...\n"
     echo "[INFO] Installing with the following parameters:"
-    echo "VM name=$VM_NAME ram=$MEMORY vcpus=$CORES bridge=$BRIDGE"
+    echo "VM name=$VM_NAME ram=$MEMORY vcpus=$CORES bridge=$BRIDGE os-variant=$OS_VARIANT"
 
     virt-install --import --name $VM_NAME --ram $MEMORY --vcpus $CORES --disk \
     $DISK,format=qcow2,bus=virtio --disk $CI_ISO,device=cdrom --network \
