@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Script to setup and boot cloud image VMs in kvm
-# v.0.7.17
+# v.0.7.20
 
 ## Usage
 #"-h|--help" help info
@@ -165,11 +165,14 @@ fi
 if [ $IMAGE = $CENTOS_IMAGE ]; then
   USER_IMG=centos;
   RM_CLOUDINIT=$(echo "yum, -y, remove, cloud-init")
+  OS_VARIANT="centos7.0"
 elif [ $IMAGE == $UBUNTU_IMAGE ]; then
   USER_IMG=ubuntu;
   RM_CLOUDINIT=$(echo "apt-get, remove, cloud-init, -y")
+  OS_VARIANT="ubuntu16.04"
 else
   USER_IMG=cloud-user;
+  OS_VARIANT="auto"
 fi
 
 # Start clean
@@ -246,11 +249,11 @@ _EOF_
 
     echo -e "$(date -R) Installing the domain and adjusting the configuration...\n"
     echo "[INFO] Installing with the following parameters:"
-    echo "VM name=$VM_NAME ram=$MEMORY vcpus=$CORES bridge=$BRIDGE"
+    echo "VM name=$VM_NAME ram=$MEMORY vcpus=$CORES bridge=$BRIDGE os-variant=$OS_VARIANT"
 
     virt-install --import --name $VM_NAME --ram $MEMORY --vcpus $CORES --disk \
     $DISK,format=qcow2,bus=virtio --disk $CI_ISO,device=cdrom --network \
-    bridge=$BRIDGE,model=virtio --os-type=linux --os-variant=rhel7 --noautoconsole
+    bridge=$BRIDGE,model=virtio --os-type=linux --os-variant=$OS_VARIANT --noautoconsole
 
     MAC=$(virsh dumpxml $VM_NAME | awk -F\' '/mac address/ {print $2}')
     while true
