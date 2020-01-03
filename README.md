@@ -20,3 +20,5 @@ build-vm.sh, usage: bash build-vms.sh -n|--name <VM_NAME> [-c|--cores <CORES_#>]
 "-d|--delete" delete VM
 
 ```
+
+For a k8s lab setup using this script check the [Wiki](https://github.com/sturrent/kvm-build-with-cloud-image/wiki)
