@@ -22,8 +22,8 @@ mkdir -p $DIR
 
 # Location of cloud image
 CENTOS_IMAGE=$DIR/CentOS-7-x86_64-GenericCloud.qcow2
-#UBUNTU_IMAGE=$DIR/bionic-server-cloudimg-amd64.img
-UBUNTU_IMAGE=$DIR/xenial-server-cloudimg-amd64-disk1.img
+UBUNTU_IMAGE=$DIR/bionic-server-cloudimg-amd64.img
+#UBUNTU_IMAGE=$DIR/xenial-server-cloudimg-amd64-disk1.img
 
 # read the options
 TEMP=$(getopt -o n:c:m:s:i:dh --long name:,cores:,memory:,sshkey:,image:,delete,help -n 'build-vm.sh' -- "$@")
