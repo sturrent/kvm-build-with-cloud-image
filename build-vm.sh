@@ -169,7 +169,7 @@ if [ $IMAGE = $CENTOS_IMAGE ]; then
 elif [ $IMAGE == $UBUNTU_IMAGE ]; then
   USER_IMG=ubuntu;
   RM_CLOUDINIT=$(echo "apt-get, remove, cloud-init, -y")
-  OS_VARIANT="ubuntu16.04"
+  OS_VARIANT="ubuntu18.04"
 else
   USER_IMG=cloud-user;
   OS_VARIANT="auto"
