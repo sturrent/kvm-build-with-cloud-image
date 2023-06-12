@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Script to setup and boot cloud image VMs in kvm
-# v.0.7.20
+# v.0.7.25
 
 ## Usage
 #"-h|--help" help info
@@ -13,7 +13,7 @@
 #"-d|--delete" delete VM
 
 # Directory of the script
-SCRIPT_PATH="$( cd "$(dirname "$0")" ; pwd -P )"
+#SCRIPT_PATH="$( cd "$(dirname "$0")" ; pwd -P )"
 SCRIPT_NAME="$(echo $0 | sed 's|\.\/||g')"
 
 # Directory to store images
@@ -22,7 +22,7 @@ mkdir -p $DIR
 
 # Location of cloud image
 CENTOS_IMAGE=$DIR/CentOS-7-x86_64-GenericCloud.qcow2
-UBUNTU_IMAGE=$DIR/bionic-server-cloudimg-amd64.img
+UBUNTU_IMAGE=$DIR/jammy-server-cloudimg-amd64.img
 #UBUNTU_IMAGE=$DIR/xenial-server-cloudimg-amd64-disk1.img
 
 # read the options
@@ -90,7 +90,7 @@ fi
 ##
 
 # Validate VM_NAME was provided
-if [ -z $VM_NAME ]; then
+if [ -z "$VM_NAME" ]; then
 	echo -e "Error: VM name must be provided. \n"
 	echo -e "build-vm.sh, usage: bash $SCRIPT_NAME -n|--name <VM_NAME> [-c|--cores <CORES_#>] [-m|--memory <MEMORY_IN_MB>] [-s|--sshkey <PUBLIC_SSH_KEY_FILE>] [-i|--image <IMAGE_FILE>] [-d|--delete]\n"
 	exit 4
@@ -99,15 +99,15 @@ fi
 # Validate VM deletion
 if [ $DELETE -eq 1 ]
 then
-  ls -ld $DIR/$VM_NAME > /dev/null 2>&1
+  ls -ld $DIR/"$VM_NAME" > /dev/null 2>&1
   VM_STATUS=$?
   if [ $VM_STATUS -ne '0' ]; then
 	  echo -e "Error: $VM_NAME VM not found. \n"
 	  exit 5
   else
-    virsh destroy $VM_NAME
-    virsh undefine $VM_NAME
-    rm -rf $DIR/$VM_NAME > /dev/null 2>&1
+    virsh destroy "$VM_NAME"
+    virsh undefine "$VM_NAME"
+    rm -rf "${DIR:?}"/"${VM_NAME}" > /dev/null 2>&1
     sed -i "/ ${VM_NAME}$/d" /etc/hosts > /dev/null 2>&1
     echo -e "$VM_NAME has been deleted \n"
     exit 0
@@ -149,7 +149,7 @@ BRIDGE=virbr0
 echo -e "\nBuilding VM $VM_NAME with $CORES cores and $MEMORY MB of ram using image $IMAGE...\n"
 
 # Check if domain already exists
-virsh dominfo $VM_NAME > /dev/null 2>&1
+virsh dominfo "$VM_NAME" > /dev/null 2>&1
 if [ "$?" -eq 0 ]; then
     echo -n "[WARNING] $VM_NAME already exists.  "
     read -p "Do you want to overwrite $VM_NAME [y/N]? " -r
@@ -169,27 +169,29 @@ if [ $IMAGE = $CENTOS_IMAGE ]; then
 elif [ $IMAGE == $UBUNTU_IMAGE ]; then
   USER_IMG=ubuntu;
   RM_CLOUDINIT=$(echo "apt-get, remove, cloud-init, -y")
-  OS_VARIANT="ubuntu18.04"
+  OS_VARIANT="ubuntu22.04"
 else
   USER_IMG=cloud-user;
   OS_VARIANT="auto"
 fi
 
-# Start clean
-rm -rf $DIR/$VM_NAME
-mkdir -p $DIR/$VM_NAME
-SSH_KEY=$(cat $SSH_KEY_FILE)
+IMAGE_PASS="$(mkpasswd patito123)"
 
-pushd $DIR/$VM_NAME > /dev/null
+# Start clean
+rm -rf "${DIR:?}"/"${VM_NAME}"
+mkdir -p ${DIR}/"${VM_NAME}"
+SSH_KEY=$(cat "$SSH_KEY_FILE")
+
+pushd "${DIR}"/"$VM_NAME" > /dev/null || exit
 
     # Create log file
-    touch $VM_NAME.log
+    touch "$VM_NAME".log
 
     echo "$(date -R) Destroying the $VM_NAME domain (if it exists)..."
 
     # Remove domain with the same name
-    virsh destroy $VM_NAME >> $VM_NAME.log 2>&1
-    virsh undefine $VM_NAME >> $VM_NAME.log 2>&1
+    virsh destroy "$VM_NAME" >> "$VM_NAME".log 2>&1
+    virsh undefine "$VM_NAME" >> "$VM_NAME".log 2>&1
 
     # cloud-init config: set hostname, remove cloud-init package,
     # and add ssh-key
@@ -204,18 +206,20 @@ fqdn: $VM_NAME.example.com
 
 # Set root pass
 users:
+  - default
   - name: root
-  - name: $USER_IMG
-    sudo: ALL=(ALL) NOPASSWD:ALL
-    lock_passwd: true
-    shell: /bin/bash
+    password: "$IMAGE_PASS"
     ssh-authorized-keys:
       - $SSH_KEY
-chpasswd:
-  list: |
-    root:${USER_IMG}
-    $USER_IMG:t3mp0r4l
-  expire: False
+    lock_passwd: false
+  - name: $USER_IMG
+    password: "$IMAGE_PASS"
+    ssh-authorized-keys:
+      - $SSH_KEY
+    sudo: ALL=(ALL) NOPASSWD:ALL
+    lock_passwd: false
+    ssh_pwauth: true
+    shell: /bin/bash
 
 # Intall some extra packages
 # packages:
@@ -241,28 +245,30 @@ _EOF_
     echo "instance-id: $VM_NAME; local-hostname: $VM_NAME" > $META_DATA
 
     echo "$(date -R) Copying template image..."
-    cp $IMAGE $DISK
+    cp "$IMAGE" "$DISK"
 
     # Create CD-ROM ISO with cloud-init config
     echo "$(date -R) Generating ISO for cloud-init..."
-    genisoimage -output $CI_ISO -volid cidata -joliet -r $USER_DATA $META_DATA &>> $VM_NAME.log
+    genisoimage -output "$CI_ISO" -volid cidata -joliet -r $USER_DATA $META_DATA &>> "$VM_NAME".log
 
     echo -e "$(date -R) Installing the domain and adjusting the configuration...\n"
     echo "[INFO] Installing with the following parameters:"
     echo "VM name=$VM_NAME ram=$MEMORY vcpus=$CORES bridge=$BRIDGE os-variant=$OS_VARIANT"
 
-    virt-install --import --name $VM_NAME --ram $MEMORY --vcpus $CORES --disk \
-    $DISK,format=qcow2,bus=virtio --disk $CI_ISO,device=cdrom --network \
-    bridge=$BRIDGE,model=virtio --os-type=linux --os-variant=$OS_VARIANT --noautoconsole
+    virt-install --import --name "$VM_NAME" --ram "$MEMORY" --vcpus "$CORES" --disk \
+    "$DISK",format=qcow2,bus=virtio --disk "$CI_ISO",device=cdrom --network \
+    bridge=$BRIDGE,model=virtio --os-variant=$OS_VARIANT --noautoconsole
 
-    MAC=$(virsh dumpxml $VM_NAME | awk -F\' '/mac address/ {print $2}')
-    while true
+    MAC=$(virsh dumpxml "$VM_NAME" | awk -F\' '/mac address/ {print $2}')
+    TIMER=120
+    while [ "$TIMER" -gt 0 ]
     do
-        IP=$(grep -B1 $MAC /var/lib/libvirt/dnsmasq/$BRIDGE.status | head \
+        IP=$(grep -B1 "$MAC" /var/lib/libvirt/dnsmasq/$BRIDGE.status | head \
              -n 1 | awk '{print $2}' | sed -e s/\"//g -e s/,//)
         if [ "$IP" = "" ]
         then
             sleep 1
+            ((TIMER-=1))
         else
             break
         fi
@@ -270,10 +276,10 @@ _EOF_
 
     # Eject cdrom
     echo -e "\n$(date -R) Cleaning up cloud-init..."
-    virsh change-media $VM_NAME hda --eject --config >> $VM_NAME.log
+    virsh change-media "$VM_NAME" hda --eject --config >> "$VM_NAME".log
 
     # Remove the unnecessary cloud init files
-    rm $USER_DATA $CI_ISO
+    rm $USER_DATA "$CI_ISO"
 
     # Update /etc/hosts
     sed -i "/ ${VM_NAME}$/d" /etc/hosts > /dev/null 2>&1
@@ -282,6 +288,6 @@ _EOF_
     echo -e "$(date -R) DONE.\n"
     echo -e "SSH to $VM_NAME using ' ssh ${USER_IMG}@${VM_NAME} ' with the corresponding private key for $SSH_KEY_FILE\n"
 
-popd > /dev/null
+popd > /dev/null || exit
 
 exit 0
